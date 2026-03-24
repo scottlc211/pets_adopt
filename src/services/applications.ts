@@ -102,15 +102,15 @@ export async function fetchApplications(userId?: string): Promise<Application[]>
 }
 
 export async function submitApplication(payload: AdoptionApplicationInput, user: AuthUser): Promise<Application> {
-  const pet = PETS.find((item) => item.id === payload.petId);
-
-  if (!pet) {
-    throw new Error('未找到对应宠物，请重新选择后再提交。');
-  }
-
   if (!supabase) {
     if (dataMode === 'disabled') {
       throw new Error('尚未配置 Supabase 数据源，无法提交申请。');
+    }
+
+    const pet = PETS.find((item) => item.id === payload.petId);
+
+    if (!pet) {
+      throw new Error('未找到对应宠物，请重新选择后再提交。');
     }
 
     const currentApplications = readMockApplications();
