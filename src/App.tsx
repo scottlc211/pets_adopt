@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   BrowserRouter,
   Navigate,
@@ -9,7 +9,7 @@ import {
   useSearchParams,
 } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { usePet } from './hooks/usePets';
+import { usePet, usePets } from './hooks/usePets';
 import AppShell from './layouts/AppShell';
 import { submitApplication } from './services/applications';
 import ApplicationFormScreen from './screens/ApplicationFormScreen';
@@ -38,13 +38,26 @@ function PetDetailRoute() {
 function ApplicationRoute() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { pet, loading } = usePet(searchParams.get('pet') ?? undefined);
+  const preselectedPetId = searchParams.get('pet') ?? '';
+  const { pets, loading, error } = usePets();
   const { user, mode } = useAuth();
   const [submitting, setSubmitting] = useState(false);
+  const [selectedPetId, setSelectedPetId] = useState(preselectedPetId);
   const [submitMessage, setSubmitMessage] = useState<{ type: 'success' | 'error' | null; text: string }>({
     type: null,
     text: '',
   });
+
+  useEffect(() => {
+    setSelectedPetId(preselectedPetId);
+  }, [preselectedPetId]);
+
+  const pet = pets.find((candidate) => candidate.id === selectedPetId) ?? null;
+
+  const handleSelectPet = (petId: string) => {
+    setSelectedPetId(petId);
+    setSubmitMessage({ type: null, text: '' });
+  };
 
   const handleSubmit = async (payload: AdoptionApplicationInput) => {
     if (!user) {
@@ -74,9 +87,12 @@ function ApplicationRoute() {
       mode={mode}
       pet={pet}
       petLoading={loading}
+      petError={error}
+      pets={pets}
       submitting={submitting}
       submitMessage={submitMessage}
       user={user}
+      onSelectPet={handleSelectPet}
       onBrowsePets={() => navigate('/explore')}
       onOpenAuth={() => navigate(`/auth?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`)}
       onSubmit={handleSubmit}

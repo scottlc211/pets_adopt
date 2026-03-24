@@ -17,12 +17,15 @@ interface FormState {
 
 interface ApplicationFormScreenProps {
   pet: Pet | null;
+  pets: Pet[];
   petLoading: boolean;
+  petError: string | null;
   user: AuthUser | null;
   mode: DataMode;
   submitting: boolean;
   submitMessage: { type: 'success' | 'error' | null; text: string };
   onSubmit: (payload: AdoptionApplicationInput) => Promise<void>;
+  onSelectPet: (petId: string) => void;
   onOpenAuth: () => void;
   onBrowsePets: () => void;
 }
@@ -37,12 +40,15 @@ const housingIcons = {
 
 export default function ApplicationFormScreen({
   pet,
+  pets,
   petLoading,
+  petError,
   user,
   mode,
   submitting,
   submitMessage,
   onSubmit,
+  onSelectPet,
   onOpenAuth,
   onBrowsePets,
 }: ApplicationFormScreenProps) {
@@ -75,11 +81,16 @@ export default function ApplicationFormScreen({
     setErrors((current) => ({ ...current, [field]: undefined }));
   }
 
+  function handlePetSelect(petId: string) {
+    onSelectPet(petId);
+    setErrors((current) => ({ ...current, pet: undefined }));
+  }
+
   function validate() {
     const nextErrors: FormErrors = {};
 
     if (!pet) {
-      nextErrors.pet = '请先从宠物详情页选择想申请的毛孩子。';
+      nextErrors.pet = '请先在当前页面选择想申请的毛孩子。';
     }
 
     if (!user) {
@@ -203,28 +214,102 @@ export default function ApplicationFormScreen({
         )}
 
         {petLoading ? (
-          <div className="mb-8 h-32 animate-pulse rounded-3xl bg-[#edeeef]" />
-        ) : pet ? (
-          <section className="mb-8 rounded-3xl bg-white p-4 shadow-sm">
-            <div className="flex items-center gap-4">
-              <img src={pet.imageUrl} alt={pet.name} className="h-24 w-24 rounded-3xl object-cover" />
-              <div className="min-w-0 flex-1">
-                <span className="inline-flex items-center gap-1 rounded-full bg-[#bcebef] px-3 py-1 text-[11px] font-bold text-[#3f6b6f]">
-                  <ShieldCheck className="h-3.5 w-3.5" />
-                  已选择申请对象
-                </span>
-                <h2 className="mt-3 font-headline text-2xl font-bold text-[#041920]">{pet.name}</h2>
-                <p className="text-sm font-medium text-[#396569]">
-                  {pet.breed} · {pet.age}
-                </p>
-                <p className="mt-2 text-sm text-gray-500">{pet.location}</p>
-              </div>
-            </div>
-          </section>
+          <div className="mb-8 space-y-4">
+            <div className="h-32 animate-pulse rounded-3xl bg-[#edeeef]" />
+            <div className="h-52 animate-pulse rounded-3xl bg-[#edeeef]" />
+          </div>
         ) : (
-          <section className="mb-8 rounded-3xl bg-white p-6 shadow-sm">
-            <p className="font-headline text-xl font-bold text-[#041920]">还没有选择宠物</p>
-            <p className="mt-2 text-sm text-gray-500">从详情页点击“领养我”后，会自动把目标宠物带到这里。</p>
+          <section className="mb-8 space-y-4">
+            {pet ? (
+              <div className="rounded-3xl bg-white p-4 shadow-sm">
+                <div className="flex items-center gap-4">
+                  <img src={pet.imageUrl} alt={pet.name} className="h-24 w-24 rounded-3xl object-cover" referrerPolicy="no-referrer" />
+                  <div className="min-w-0 flex-1">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-[#bcebef] px-3 py-1 text-[11px] font-bold text-[#3f6b6f]">
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                      已选择申请对象
+                    </span>
+                    <h2 className="mt-3 font-headline text-2xl font-bold text-[#041920]">{pet.name}</h2>
+                    <p className="text-sm font-medium text-[#396569]">
+                      {pet.breed} · {pet.age}
+                    </p>
+                    <p className="mt-2 text-sm text-gray-500">{pet.location}</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-3xl bg-white p-6 shadow-sm">
+                <p className="font-headline text-xl font-bold text-[#041920]">还没有选择宠物</p>
+                <p className="mt-2 text-sm text-gray-500">直接在下方选择想申请的毛孩子，无需先进入详情页。</p>
+              </div>
+            )}
+
+            {petError ? (
+              <div className="rounded-3xl bg-white p-6 text-sm leading-6 text-rose-600 shadow-sm">{petError}</div>
+            ) : pets.length > 0 ? (
+              <div className="rounded-3xl bg-white p-4 shadow-sm">
+                <div className="mb-4 flex items-end justify-between gap-4">
+                  <div>
+                    <p className="font-headline text-xl font-bold text-[#041920]">
+                      {pet ? '想换一只？' : '直接选择申请对象'}
+                    </p>
+                    <p className="mt-1 text-sm text-gray-500">
+                      {pet ? '可以直接切换申请对象，不用离开当前页面。' : '选中后即可继续填写申请资料。'}
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-[#396569]/10 px-3 py-1 text-[11px] font-bold text-[#396569]">
+                    {pets.length} 只可选
+                  </span>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-2">
+                  {pets.map((candidate) => {
+                    const active = pet?.id === candidate.id;
+
+                    return (
+                      <button
+                        key={candidate.id}
+                        type="button"
+                        onClick={() => handlePetSelect(candidate.id)}
+                        className={`flex items-center gap-4 rounded-3xl p-3 text-left transition-all active:scale-[0.99] ${
+                          active ? 'bg-[#041920] text-white shadow-lg shadow-[#041920]/10' : 'bg-[#f3f4f5] text-[#041920]'
+                        }`}
+                      >
+                        <img
+                          src={candidate.imageUrl}
+                          alt={candidate.name}
+                          className="h-20 w-20 rounded-[1.25rem] object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="truncate font-headline text-xl font-bold">{candidate.name}</p>
+                            <span
+                              className={`rounded-full px-3 py-1 text-[11px] font-bold ${
+                                active ? 'bg-white/15 text-white' : 'bg-white text-[#396569]'
+                              }`}
+                            >
+                              {active ? '已选中' : '选择它'}
+                            </span>
+                          </div>
+                          <p className={`mt-1 text-sm font-medium ${active ? 'text-white/75' : 'text-[#396569]'}`}>
+                            {candidate.breed} · {candidate.age}
+                          </p>
+                          <p className={`mt-2 text-sm ${active ? 'text-white/70' : 'text-gray-500'}`}>
+                            {candidate.location}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-3xl bg-white p-6 shadow-sm">
+                <p className="font-headline text-xl font-bold text-[#041920]">当前没有可申请的宠物</p>
+                <p className="mt-2 text-sm text-gray-500">稍后再来看看，或继续探索最新的领养信息。</p>
+              </div>
+            )}
           </section>
         )}
 
