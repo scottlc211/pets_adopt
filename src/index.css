@@ -1,0 +1,32 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;700;800&display=swap");
+@import "tailwindcss";
+
+@theme {
+  --font-headline: "Plus Jakarta Sans", "Noto Sans SC", sans-serif;
+  --font-body: "Inter", "Noto Sans SC", sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-[#f8f9fa] text-[#041920] antialiased;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  button,
+  input,
+  textarea {
+    @apply outline-none;
+  }
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
