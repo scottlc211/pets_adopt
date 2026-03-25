@@ -56,9 +56,13 @@ export default function ProfileScreen() {
             <div className="flex items-center gap-6">
               <div className="relative">
                 <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-[#bcebef] ring-4 ring-[#edeeef]">
-                  <span className="font-headline text-3xl font-bold text-[#396569]">
-                    {user.displayName.slice(0, 1)}
-                  </span>
+                  {user.avatarUrl ? (
+                    <img src={user.avatarUrl} alt={`${user.displayName}头像`} className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="font-headline text-3xl font-bold text-[#396569]">
+                      {user.displayName.slice(0, 1)}
+                    </span>
+                  )}
                 </div>
                 <div className="absolute bottom-0 right-0 flex items-center justify-center rounded-full border-2 border-white bg-[#396569] p-1.5 text-white">
                   <Verified className="h-3.5 w-3.5 fill-current" />
@@ -67,6 +71,7 @@ export default function ProfileScreen() {
               <div className="flex flex-col gap-1">
                 <h2 className="font-headline text-3xl font-bold tracking-tight text-[#041920]">{user.displayName}</h2>
                 <p className="text-sm text-gray-500">{user.email}</p>
+                {user.address && <p className="text-sm text-gray-500">{user.address}</p>}
                 <p className="text-sm text-gray-500">
                   注册日期：{new Date(user.registeredAt).toLocaleDateString('zh-CN')}
                 </p>
@@ -172,7 +177,12 @@ export default function ProfileScreen() {
           <h3 className="mb-4 font-headline text-xl font-bold text-[#041920]">账户设置</h3>
           <div className="overflow-hidden rounded-3xl bg-[#f3f4f5]">
             {[
-              { icon: User, label: '个人资料', color: 'text-[#041920]', action: () => navigate(user ? '/apply' : '/auth') },
+              {
+                icon: User,
+                label: '个人资料',
+                color: 'text-[#041920]',
+                action: () => navigate(user ? '/profile/details' : '/auth?redirect=/profile/details'),
+              },
               { icon: Shield, label: '安全与隐私', color: 'text-[#041920]' },
               { icon: HelpCircle, label: '帮助与支持', color: 'text-[#041920]' },
               user

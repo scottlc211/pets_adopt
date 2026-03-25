@@ -3,6 +3,7 @@ export type HousingType = 'apartment' | 'villa' | 'rental';
 export type ExperienceLevel = 'first-time' | 'experienced';
 export type ApplicationStatus = '审核中' | '资料待补充' | '家访预定' | '已确认';
 export type DataMode = 'supabase' | 'mock' | 'disabled';
+export type ProfileGender = '女' | '男' | '不透露';
 
 export interface Pet {
   id: string;
@@ -70,7 +71,19 @@ export interface AuthUser {
   displayName: string;
   registeredAt: string;
   city?: string;
+  avatarUrl?: string;
+  gender?: ProfileGender;
+  address?: string;
+  birthDate?: string;
   source: DataMode;
+}
+
+export interface AuthProfileUpdate {
+  displayName: string;
+  gender: ProfileGender;
+  address: string;
+  birthDate: string;
+  avatarUrl?: string;
 }
 
 export interface AuthCredentials {

@@ -3,10 +3,11 @@ import type { User } from '@supabase/supabase-js';
 import { MOCK_PASSWORD, MOCK_USER } from '../constants';
 import { dataMode } from '../lib/env';
 import { supabase } from '../lib/supabase';
-import type { AuthCredentials, AuthUser, DataMode } from '../types';
+import type { AuthCredentials, AuthProfileUpdate, AuthUser, DataMode } from '../types';
 
 const MOCK_USERS_STORAGE_KEY = 'pets_adopt_auth_users';
 const MOCK_SESSION_STORAGE_KEY = 'pets_adopt_auth_session';
+const USER_PROFILE_STORAGE_KEY = 'pets_adopt_user_profiles';
 
 interface SignUpResult {
   requiresEmailConfirmation: boolean;
@@ -20,6 +21,7 @@ interface AuthContextValue {
   signIn: (credentials: AuthCredentials) => Promise<void>;
   signUp: (credentials: AuthCredentials) => Promise<SignUpResult>;
   signOut: () => Promise<void>;
+  updateProfile: (profile: AuthProfileUpdate) => Promise<void>;
 }
 
 interface MockStoredUser extends AuthUser {
@@ -28,19 +30,76 @@ interface MockStoredUser extends AuthUser {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+type StoredProfiles = Record<
+  string,
+  Pick<AuthUser, 'displayName' | 'avatarUrl' | 'gender' | 'address' | 'birthDate' | 'city'>
+>;
+
+function readStoredProfiles() {
+  const raw = window.localStorage.getItem(USER_PROFILE_STORAGE_KEY);
+
+  if (!raw) {
+    return {} as StoredProfiles;
+  }
+
+  try {
+    return JSON.parse(raw) as StoredProfiles;
+  } catch {
+    return {} as StoredProfiles;
+  }
+}
+
+function readStoredProfile(userId: string) {
+  return readStoredProfiles()[userId];
+}
+
+function writeStoredProfile(userId: string, profile: StoredProfiles[string]) {
+  const profiles = readStoredProfiles();
+  profiles[userId] = profile;
+  window.localStorage.setItem(USER_PROFILE_STORAGE_KEY, JSON.stringify(profiles));
+}
+
+function mergeStoredProfile(user: AuthUser): AuthUser {
+  const storedProfile = readStoredProfile(user.id);
+
+  if (!storedProfile) {
+    return user;
+  }
+
+  return {
+    ...user,
+    ...storedProfile,
+  };
+}
+
+function deriveCityFromAddress(address: string) {
+  const trimmedAddress = address.trim();
+
+  if (!trimmedAddress) {
+    return '';
+  }
+
+  const [city] = trimmedAddress.split(/[，,]/);
+  return city?.trim() || trimmedAddress;
+}
+
 function mapSupabaseUser(user: User | null): AuthUser | null {
   if (!user) {
     return null;
   }
 
-  return {
+  return mergeStoredProfile({
     id: user.id,
     email: user.email ?? '',
     displayName: (user.user_metadata.display_name as string | undefined) ?? user.email?.split('@')[0] ?? '领养申请人',
     registeredAt: user.created_at ?? new Date().toISOString(),
     city: (user.user_metadata.city as string | undefined) ?? '',
+    avatarUrl: (user.user_metadata.avatar_url as string | undefined) ?? '',
+    gender: (user.user_metadata.gender as AuthUser['gender']) ?? '不透露',
+    address: (user.user_metadata.address as string | undefined) ?? '',
+    birthDate: (user.user_metadata.birth_date as string | undefined) ?? '',
     source: 'supabase',
-  };
+  });
 }
 
 function readMockUsers(): MockStoredUser[] {
@@ -77,7 +136,7 @@ function readMockSession() {
   }
 
   try {
-    return JSON.parse(raw) as AuthUser;
+    return mergeStoredProfile(JSON.parse(raw) as AuthUser);
   } catch {
     return null;
   }
@@ -167,11 +226,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             displayName: account.displayName,
             registeredAt: account.registeredAt,
             city: account.city,
+            avatarUrl: account.avatarUrl,
+            gender: account.gender,
+            address: account.address,
+            birthDate: account.birthDate,
             source: 'mock',
           };
 
-          writeMockSession(nextUser);
-          setUser(nextUser);
+          const mergedUser = mergeStoredProfile(nextUser);
+          writeMockSession(mergedUser);
+          setUser(mergedUser);
           return;
         }
 
@@ -206,6 +270,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             displayName: credentials.displayName,
             registeredAt: new Date().toISOString(),
             city: '',
+            avatarUrl: '',
+            gender: '不透露',
+            address: '',
+            birthDate: '',
             source: 'mock',
             password: credentials.password,
           };
@@ -217,6 +285,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             displayName: nextUser.displayName,
             registeredAt: nextUser.registeredAt,
             city: nextUser.city,
+            avatarUrl: nextUser.avatarUrl,
+            gender: nextUser.gender,
+            address: nextUser.address,
+            birthDate: nextUser.birthDate,
             source: 'mock',
           });
           setUser({
@@ -225,6 +297,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             displayName: nextUser.displayName,
             registeredAt: nextUser.registeredAt,
             city: nextUser.city,
+            avatarUrl: nextUser.avatarUrl,
+            gender: nextUser.gender,
+            address: nextUser.address,
+            birthDate: nextUser.birthDate,
             source: 'mock',
           });
           return { requiresEmailConfirmation: false };
@@ -264,6 +340,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (error) {
           throw new Error(error.message);
         }
+      },
+      async updateProfile(profile) {
+        if (!user) {
+          throw new Error('请先登录后再编辑个人资料。');
+        }
+
+        const nextUser: AuthUser = {
+          ...user,
+          displayName: profile.displayName,
+          gender: profile.gender,
+          address: profile.address,
+          birthDate: profile.birthDate,
+          avatarUrl: profile.avatarUrl ?? '',
+          city: deriveCityFromAddress(profile.address),
+        };
+
+        writeStoredProfile(user.id, {
+          displayName: nextUser.displayName,
+          avatarUrl: nextUser.avatarUrl,
+          gender: nextUser.gender,
+          address: nextUser.address,
+          birthDate: nextUser.birthDate,
+          city: nextUser.city,
+        });
+
+        if (!supabase) {
+          writeMockSession(nextUser);
+        }
+
+        setUser(nextUser);
       },
     }),
     [loading, user],

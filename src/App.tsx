@@ -17,6 +17,7 @@ import AuthScreen from './screens/AuthScreen';
 import DetailScreen from './screens/DetailScreen';
 import DiscoveryScreen from './screens/DiscoveryScreen';
 import MessagesScreen from './screens/MessagesScreen';
+import ProfileDetailsScreen from './screens/ProfileDetailsScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import type { AdoptionApplicationInput } from './types';
 
@@ -110,6 +111,7 @@ function AppRoutes() {
         <Route path="/explore" element={<DiscoveryScreen />} />
         <Route path="/apply" element={<ApplicationRoute />} />
         <Route path="/messages" element={<MessagesScreen />} />
+        <Route path="/profile/details" element={<ProfileDetailsScreen />} />
         <Route path="/profile" element={<ProfileScreen />} />
       </Route>
       <Route path="*" element={<Navigate replace to="/explore" />} />
